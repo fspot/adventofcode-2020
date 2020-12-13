@@ -5,12 +5,12 @@ from typing import List, Tuple
 
 def rotate(point: Tuple[float, float], degrees: float) -> Tuple[float, float]:
     x, y = point
+    radian = degrees * math.pi / 180
     current_norm = math.sqrt(x ** 2 + y ** 2)
-    current_angle_degree = math.atan(y / x) / math.pi * 180
-    new_angle = current_angle_degree + degrees
-    new_angle_radian = new_angle * math.pi / 180
-    new_x = current_norm * math.cos(new_angle_radian)
-    new_y = current_norm * math.sin(new_angle_radian)
+    current_angle = math.atan2(y, x)
+    new_angle = current_angle + radian
+    new_x = current_norm * math.cos(new_angle)
+    new_y = current_norm * math.sin(new_angle)
     return (new_x, new_y)
 
 
