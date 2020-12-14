@@ -1,4 +1,5 @@
 import re
+from itertools import product
 from pathlib import Path
 from typing import Dict, List, Union
 from dataclasses import dataclass
@@ -12,6 +13,20 @@ def apply_mask(value: int, mask: str) -> int:
     mask_enforce_zeros = int(mask.replace("X", "1"), 2)
     value &= mask_enforce_zeros
     return value
+
+
+def apply_mask_v2(addr: int, mask: str) -> List[int]:
+    # First, force the 1s on the address:
+    mask_enforce_ones = int(mask.replace("X", "0"), 2)
+    addr |= mask_enforce_ones
+    # Then, apply floating bits:
+    addresses = []
+    combinations = product([0, 1], repeat=mask.count('X'))
+    mask = mask.replace('0', '.').replace('1', '.').replace('X', '%d').replace('.', 'X')
+    for comb in combinations:
+        mask_for_comb = mask % comb
+        addresses.append(apply_mask(addr, mask_for_comb))
+    return addresses
 
 
 @dataclass
@@ -44,16 +59,25 @@ def parse_program(lines: List[str]) -> List[Command]:
 
 
 class Computer:
-    def __init__(self, commands: List[str]):
+    def __init__(self, commands: List[str], version: int = 1):
         self.mask = "X" * 36
         self.program = parse_program(lines)
         self.memory: Dict[int, int] = {}
+        self.version = version
+
+    def run_command_writevalue_v2(self, addr: int, value: int, mask: str):
+        all_addresses = apply_mask_v2(addr, mask)
+        for addr in all_addresses:
+            self.memory[addr] = value
 
     def run_command(self, command: Command):
         if isinstance(command, SetMask):
             self.mask = command.mask
         elif isinstance(command, WriteValue):
-            self.memory[command.addr] = apply_mask(command.value, self.mask)
+            if self.version == 2:
+                self.run_command_writevalue_v2(command.addr, command.value, self.mask)
+            else:
+                self.memory[command.addr] = apply_mask(command.value, self.mask)
 
     def run_full_program(self):
         for command in self.program:
@@ -65,6 +89,11 @@ class Computer:
 
 if __name__ == "__main__":
     lines = Path("input.txt").read_text().splitlines(keepends=False)
-    computer = Computer(lines)
-    computer.run_full_program()
-    print("Part1:", computer.get_sum_memory())
+
+    c1 = Computer(lines, version=1)
+    c1.run_full_program()
+    print("Part1:", c1.get_sum_memory())
+
+    c2 = Computer(lines, version=2)
+    c2.run_full_program()
+    print("Part2:", c2.get_sum_memory())
